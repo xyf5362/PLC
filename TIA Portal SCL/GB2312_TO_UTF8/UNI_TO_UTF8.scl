@@ -1,0 +1,34 @@
+﻿FUNCTION_BLOCK "UNI_TO_UTF8"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      UNICODE : Word;
+   END_VAR
+
+   VAR_OUTPUT 
+      UTF8 : String[4];
+   END_VAR
+
+   VAR_TEMP 
+      TempStr : String[4];
+   END_VAR
+
+
+BEGIN
+	#TempStr := '0000';
+	IF #UNICODE <= 16#0000007F THEN
+	    #TempStr[1] := WORD_TO_BYTE(#UNICODE AND 16#7F);//0111 1111
+	    #UTF8 := LEFT(IN := #TempStr, L := 1);
+	ELSIF #UNICODE > 16#00000080 AND #UNICODE <= 16#000007FF THEN
+	    #TempStr[2] := WORD_TO_BYTE((#UNICODE AND 16#3F) OR 16#80);//0111 1111            1000 0000
+	    #TempStr[1] := WORD_TO_BYTE((SHR(IN := #UNICODE, N := 6) AND 16#1F) OR 16#C0);//0001 1111     1100 0000
+	    #UTF8 := LEFT(IN := #TempStr, L := 2);
+	ELSIF #UNICODE > 16#00000800 AND #UNICODE <= 16#0000FFFF THEN
+	    #TempStr[3] := WORD_TO_BYTE((#UNICODE AND 16#3F) OR 16#80);
+	    #TempStr[2] := WORD_TO_BYTE((SHR(IN := #UNICODE, N := 6) AND 16#3F) OR 16#80);
+	    #TempStr[1] := WORD_TO_BYTE((SHR(IN := #UNICODE, N := 12) AND 16#0F) OR 16#E0);
+	    #UTF8 := LEFT(IN := #TempStr, L := 3);
+	END_IF;
+	
+END_FUNCTION_BLOCK
+

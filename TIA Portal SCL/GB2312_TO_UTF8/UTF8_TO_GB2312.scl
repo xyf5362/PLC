@@ -1,0 +1,61 @@
+﻿FUNCTION_BLOCK "UTF8_TO_GB2312"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      UTF8 : String[254];
+   END_VAR
+
+   VAR_OUTPUT 
+      GB2312 : String[254];
+   END_VAR
+
+   VAR 
+      u8_u { S7_SetPoint := 'False'} : "UTF8_TO_UNI";
+      u_g : "UNI_TO_GB2";
+   END_VAR
+
+   VAR_TEMP 
+      i : Int;
+      j : Int;
+      lenUTF8 : Int;
+      tempword : Word;
+      tempstr : String[5];
+   END_VAR
+
+
+BEGIN
+	#GB2312 := '';
+	#tempstr := '0000';
+	#lenUTF8 := LEN(#UTF8);
+	IF #lenUTF8 > 0 THEN
+	    #j := 1;
+	    FOR #i := 1 TO #lenUTF8 DO
+	        IF #i = #j THEN
+	            IF BYTE_TO_WORD(#UTF8[#i]) < 16#0080 THEN
+	                #tempstr := MID(IN := #UTF8, L := 1, P := #i);
+	                #j := #j + 1;
+	            ELSIF BYTE_TO_WORD(#UTF8[#i]) >= 16#C0 AND BYTE_TO_WORD(#UTF8[#i]) < 16#E0 THEN
+	                #tempstr := MID(IN := #UTF8, L := 2, P := #i);
+	                #j := #j + 2;
+	            ELSIF BYTE_TO_WORD(#UTF8[#i]) >= 16#E0 AND BYTE_TO_WORD(#UTF8[#i]) < 16#F0 THEN
+	                #tempstr := MID(IN := #UTF8, L := 3, P := #i);
+	                #j := #j + 3;
+	            ELSIF BYTE_TO_WORD(#UTF8[#i]) >= 16#F0 AND BYTE_TO_WORD(#UTF8[#i]) < 16#F8 THEN
+	                #tempstr := MID(IN := #UTF8, L := 4, P := #i);
+	                #j := #j + 4;
+	            END_IF;
+	            IF BYTE_TO_WORD(#UTF8[#i]) >= 16#0080 THEN
+	                #u8_u(UTF8 := #tempstr,
+	                      UNICODE => #tempword);
+	                #u_g(UNICODE := #tempword,
+	                     GB2312 => #tempword);
+	                #tempstr[2] := WORD_TO_BYTE(#tempword AND 16#FF);
+	                #tempstr[1] := WORD_TO_BYTE(SHR(IN := #tempword, N := 8) AND 16#FF);
+	                #tempstr := LEFT(IN := #tempstr, L := 2);
+	            END_IF;
+	            #GB2312 := CONCAT(IN1 := #GB2312, IN2 := #tempstr);
+	        END_IF;
+	    END_FOR;
+	END_IF;
+END_FUNCTION_BLOCK
+

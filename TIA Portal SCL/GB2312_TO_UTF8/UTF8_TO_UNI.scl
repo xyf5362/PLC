@@ -1,0 +1,53 @@
+﻿FUNCTION_BLOCK "UTF8_TO_UNI"
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      UTF8 : String[4];
+   END_VAR
+
+   VAR_OUTPUT 
+      UNICODE : Word;
+   END_VAR
+
+   VAR_TEMP 
+      TempDW : DWord;
+      TempW : Array[0..3] of Word;
+   END_VAR
+
+
+BEGIN
+	#TempDW := #UTF8[1];
+	IF #TempDW < 16#80 THEN
+	    #UNICODE := DWORD_TO_WORD(#TempDW AND 16#7F);
+	ELSIF #TempDW >= 16#80 AND #TempDW < 16#C0 THEN
+	    ;
+	ELSIF #TempDW >= 16#C0 AND #TempDW < 16#E0 THEN
+	    #TempDW := SHL(IN := #TempDW, N := 8);
+	    #TempDW := #TempDW + BYTE_TO_WORD(#UTF8[2]);
+	    #TempW[0] := DWORD_TO_WORD(SHR(IN:=#TempDW AND 16#1F00, N:=2));
+	    #TempW[1] := DWORD_TO_WORD(#TempDW AND 16#3F);
+	    #UNICODE := #TempW[0] + #TempW[1];
+	ELSIF #TempDW >= 16#E0 AND #TempDW < 16#F0 THEN
+	    #TempDW := SHL(IN := #TempDW, N := 8);
+	    #TempDW := #TempDW + BYTE_TO_WORD(#UTF8[2]);
+	    #TempDW := SHL(IN := #TempDW, N := 8);
+	    #TempDW := #TempDW + BYTE_TO_WORD(#UTF8[3]);
+	    #TempW[0] := DWORD_TO_WORD(SHR(IN:=#TempDW AND 16#0F0000, N:=4));
+	    #TempW[1] := DWORD_TO_WORD(SHR(IN:=#TempDW AND 16#3F00, N:=2));
+	    #TempW[2] := DWORD_TO_WORD(#TempDW AND 16#3F);
+	    #UNICODE := #TempW[0] + #TempW[1] + #TempW[2];
+	ELSIF #TempDW >= 16#F0 AND #TempDW < 16#F8 THEN
+	    #TempDW := SHL(IN := #TempDW,  N := 8);
+	    #TempDW := #TempDW + BYTE_TO_WORD(#UTF8[2]);
+	    #TempDW := SHL(IN := #TempDW, N := 8);
+	    #TempDW := #TempDW + BYTE_TO_WORD(#UTF8[3]);
+	    #TempDW := SHL(IN := #TempDW,  N := 8);
+	    #TempDW := #TempDW + BYTE_TO_WORD(#UTF8[4]);
+	    #TempW[0] := DWORD_TO_WORD(SHR(IN:=#TempDW AND 16#7000000, N:=6));
+	    #TempW[1] := DWORD_TO_WORD(SHR(IN:=#TempDW AND 16#3F0000, N:=4));
+	    #TempW[2] := DWORD_TO_WORD(SHR(IN:=#TempDW AND 16#3F00, N:=2));
+	    #TempW[3] := DWORD_TO_WORD(#TempDW AND 16#3F);
+	    #UNICODE := #TempW[0] + #TempW[1] + #TempW[2] + #TempW[3];
+	END_IF;
+END_FUNCTION_BLOCK
+
