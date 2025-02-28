@@ -1,0 +1,30 @@
+﻿FUNCTION "HEX_TO_WORD" : Word
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      HEX : String;
+   END_VAR
+
+   VAR_TEMP 
+      i : Int;
+      X : Byte;
+      W : Word;
+   END_VAR
+
+
+BEGIN
+	#W := 0;
+	FOR #i := 1 TO 4 DO
+	    #X := #HEX[#i];
+	    IF #X > 47 AND #X < 58 THEN
+	        #W := SHL(IN:=#W, N:=4) + #X - 48;
+	    ELSIF #X > 64 AND #X < 71 THEN
+	        #W := SHL(IN:=#W, N:=4) + #X - 55;
+	    ELSIF #X > 96 AND #X < 103 THEN
+	        #W := SHL(IN:=#W, N:=4) + #X - 87;
+	    END_IF;
+	END_FOR;
+	#HEX_TO_WORD := #W;
+	
+END_FUNCTION
+

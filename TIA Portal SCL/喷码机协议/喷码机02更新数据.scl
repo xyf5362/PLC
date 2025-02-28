@@ -1,0 +1,120 @@
+﻿FUNCTION "喷码机02更新数据" : String
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      X0信息 : String;
+      X1信息 : String;
+      X2信息 : String;
+      X3信息 : String;
+   END_VAR
+
+   VAR_TEMP 
+      X0长度 : Int;
+      X1长度 : Int;
+      X2长度 : Int;
+      X3长度 : Int;
+      转换信息 : String;
+      i : Int;
+      j : DInt;
+      Temp_Str : String;
+      求和 : DWord;
+      Checksum : Word;
+      Temp_Chars : Array[1..250] of Byte;
+   END_VAR
+
+
+BEGIN
+	#X0长度 := LEN(#X0信息);
+	#X1长度 := LEN(#X1信息);
+	#X2长度 := LEN(#X2信息);
+	#X3长度 := LEN(#X3信息);
+	IF #X0长度 > 0 OR #X1长度 > 0 OR #X2长度 > 0 OR #X3长度 > 0 THEN
+	    #转换信息 := '';
+	    IF #X0长度 > 0 THEN                                      //X0
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '00580030');
+	        Strg_TO_Chars(Strg := #X0信息,
+	                      pChars := 0,
+	                      Cnt => #j,
+	                      Chars := #Temp_Chars);
+	        FOR #i := 1 TO #X0长度 BY 1 DO               //信息X0内容转为明码
+	            #j := HTA(IN := #Temp_Chars[#i], N := 1, OUT => #Temp_Str);
+	            IF #Temp_Chars[#i] < 128 THEN
+	                #Temp_Str := CONCAT(IN1 := '00', IN2 := #Temp_Str);
+	            END_IF;
+	            #转换信息 := CONCAT(IN1 := #转换信息, IN2 := #Temp_Str);
+	        END_FOR;
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '001F');
+	    END_IF;//.............................................................
+	    IF #X1长度 > 0 THEN                                      //X1
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '00580031');
+	        Strg_TO_Chars(Strg := #X1信息,
+	                      pChars := 0,
+	                      Cnt => #j,
+	                      Chars := #Temp_Chars);
+	        FOR #i := 1 TO #X1长度 BY 1 DO               //信息X1内容转为明码
+	            #j := HTA(IN := #Temp_Chars[#i], N := 1, OUT => #Temp_Str);
+	            IF #Temp_Chars[#i] < 128 THEN
+	                #Temp_Str := CONCAT(IN1 := '00', IN2 := #Temp_Str);
+	            END_IF;
+	            #转换信息 := CONCAT(IN1 := #转换信息, IN2 := #Temp_Str);
+	        END_FOR;
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '001F');
+	    END_IF;//.............................................................    
+	    IF #X2长度 > 0 THEN                                      //X2
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '00580032');
+	        Strg_TO_Chars(Strg := #X2信息,
+	                      pChars := 0,
+	                      Cnt => #j,
+	                      Chars := #Temp_Chars);
+	        FOR #i := 1 TO #X2长度 BY 1 DO               //信息X2内容转为明码
+	            #j := HTA(IN := #Temp_Chars[#i], N := 1, OUT => #Temp_Str);
+	            IF #Temp_Chars[#i] < 128 THEN
+	                #Temp_Str := CONCAT(IN1 := '00', IN2 := #Temp_Str);
+	            END_IF;
+	            #转换信息 := CONCAT(IN1 := #转换信息, IN2 := #Temp_Str);
+	        END_FOR;
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '001F');
+	    END_IF;//.............................................................
+	    IF #X3长度 > 0 THEN                                      //X3
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '00580033');
+	        Strg_TO_Chars(Strg := #X3信息,
+	                      pChars := 0,
+	                      Cnt => #j,
+	                      Chars := #Temp_Chars);
+	        FOR #i := 1 TO #X3长度 BY 1 DO               //信息X3内容转为明码
+	            #j := HTA(IN := #Temp_Chars[#i], N := 1, OUT => #Temp_Str);
+	            IF #Temp_Chars[#i] < 128 THEN
+	                #Temp_Str := CONCAT(IN1 := '00', IN2 := #Temp_Str);
+	            END_IF;
+	            #转换信息 := CONCAT(IN1 := #转换信息, IN2 := #Temp_Str);
+	        END_FOR;
+	        #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '001F');
+	    END_IF;//.............................................................      
+	    #j := HTA(IN := LEN(#转换信息), N := 4, OUT => #Temp_Str);//Length明码
+	    #Temp_Str := LEFT(IN := #Temp_Str, L := 4);//for 1500
+	    #转换信息 := CONCAT(IN1 := #Temp_Str, IN2 := #转换信息);
+	    #转换信息 := CONCAT(IN1 := '01', IN2 := #转换信息);//追加或更新
+	    #转换信息 := CONCAT(IN1 := '02', IN2 := #转换信息);//OrderID    
+	    #求和 := 0;//.........................................................................
+	    Strg_TO_Chars(Strg := #转换信息,
+	                  pChars := 0,
+	                  Cnt => #j,
+	                  Chars := #Temp_Chars);
+	    FOR #i := 1 TO LEN(#转换信息) DO//求和
+	        #求和 := #求和 + #Temp_Chars[#i];
+	    END_FOR;//....................................................................................
+	    #Checksum := DWORD_TO_WORD(#求和 MOD 65536);
+	    #Checksum := NOT #Checksum;
+	    #Checksum := #Checksum + 1; //Checksum
+	    #j := HTA(IN := #Checksum, N := 4, OUT => #Temp_Str);//Checksum明码.....
+	    #Temp_Str := LEFT(IN := #Temp_Str, L := 4);//for 1500
+	    #转换信息 := CONCAT(IN1 := #转换信息, IN2 := #Temp_Str);
+	    #转换信息 := CONCAT(IN1 := '~', IN2 := #转换信息);        //起始码
+	    #转换信息 := CONCAT(IN1 := #转换信息, IN2 := '$R');       //结束码
+	    #喷码机02更新数据 := #转换信息;
+	ELSE
+	    #喷码机02更新数据 := '';
+	END_IF;
+	
+END_FUNCTION
+

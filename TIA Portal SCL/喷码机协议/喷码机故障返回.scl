@@ -1,0 +1,93 @@
+﻿FUNCTION "喷码机故障返回" : Bool
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      返回数据 : String;
+   END_VAR
+
+   VAR_OUTPUT 
+      高压故障 : Bool;
+      回收信号故障 : Bool;
+      机箱温度过高 : Bool;
+      混合缸空 : Bool;
+      充电故障 : Bool;
+      喷头盖打开 : Bool;
+      风扇故障 : Bool;
+      墨水缸空 : Bool;
+      溶剂缸空 : Bool;
+      混合缸满 : Bool;
+      粘度错误 : Bool;
+      粘度检测错误 : Bool;
+      同步器过快 : Bool;
+   END_VAR
+
+   VAR_TEMP 
+      OrderID : Byte;
+      RTN : Byte;
+      BackData : Word;
+      CheckSum : String;
+      Temp_Str : String;
+      求和 : DWord;
+      i : UDInt;
+      j : UDInt;
+      故障信息 : Word;
+      Temp_Chars : Array[0..20] of Byte;
+      Temp_Word : Word;
+      系统故障 : Array[0..15] of Bool;
+   END_VAR
+
+
+BEGIN
+	IF LEN(#返回数据) = 14 THEN
+	    #Temp_Str := MID(IN := #返回数据, L := 2, P := 2);
+	    #j := ATH(IN := #Temp_Str, N := 2, OUT => #OrderID);
+	    #Temp_Str := MID(IN := #返回数据, L := 2, P := 4);
+	    #j := ATH(IN := #Temp_Str, N := 2, OUT => #RTN);
+	    #Temp_Str := MID(IN := #返回数据, L := 4, P := 6);
+	    #j := ATH(IN := #Temp_Str, N := 4, OUT => #BackData);
+	    #CheckSum := MID(IN := #返回数据, L := 4, P := 10);
+	    #求和 := 0;//..........................................................
+	    Strg_TO_Chars(Strg := #返回数据,
+	                  pChars := 0,
+	                  Cnt => #j,
+	                  Chars := #Temp_Chars);
+	    FOR #i := 1 TO 8 BY 1 DO
+	        #求和 := #求和 + #Temp_Chars[#i];
+	    END_FOR;
+	    #Temp_Word := DWORD_TO_WORD(#求和 MOD 65536);
+	    #Temp_Word := NOT #Temp_Word;
+	    #Temp_Word := #Temp_Word + 1; //Checksum
+	    #j := HTA(IN := #Temp_Word, N := 4, OUT => #Temp_Str);//Checksum明码.....
+	    IF #Temp_Str = #CheckSum THEN
+	        #喷码机故障返回 := 1;
+	    ELSE
+	        #喷码机故障返回 := 0;
+	    END_IF;
+	    IF #OrderID = 16#04 OR #OrderID = 16#FE THEN
+	        #故障信息 := #BackData;
+	        #Temp_Word := #BackData AND 16#0001;
+	        FOR #i := 1 TO 16 DO
+	            IF #Temp_Word <> 0 THEN
+	                #系统故障[#i] := 1;
+	            END_IF;
+	            #Temp_Word := SHR(IN := #BackData, N := (#i)) AND 16#0001;
+	        END_FOR;
+	        #高压故障 := #系统故障[0];
+	        #回收信号故障 := #系统故障[1];
+	        #机箱温度过高 := #系统故障[2];
+	        #混合缸空 := #系统故障[3];
+	        #充电故障 := #系统故障[4];
+	        #喷头盖打开 := #系统故障[5];
+	        #风扇故障 := #系统故障[8];
+	        #墨水缸空 := #系统故障[9];
+	        #溶剂缸空 := #系统故障[10];
+	        #混合缸满 := #系统故障[11];
+	        #粘度错误 := #系统故障[12];
+	        #粘度检测错误 := #系统故障[13];
+	        #同步器过快 := #系统故障[14];
+	    END_IF;
+	ELSE
+	    #喷码机故障返回 := 0;
+	END_IF;
+END_FUNCTION
+

@@ -1,0 +1,15 @@
+﻿FUNCTION "喷码机06结束喷印" : String
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_TEMP 
+      转换信息 : String;
+   END_VAR
+
+
+BEGIN
+	#转换信息 := '09000000FE77';
+	#转换信息 := CONCAT(IN1:='~', IN2:=#转换信息);        //起始码
+	#转换信息 := CONCAT(IN1:=#转换信息, IN2:='$R');       //结束码
+	#喷码机06结束喷印 := #转换信息;
+END_FUNCTION
+

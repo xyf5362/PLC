@@ -1,0 +1,97 @@
+﻿FUNCTION "喷码机数据返回" : Bool
+{ S7_Optimized_Access := 'TRUE' }
+VERSION : 0.1
+   VAR_INPUT 
+      返回数据 : String;
+   END_VAR
+
+   VAR_OUTPUT 
+      数据条数 : UInt;
+      已满1000条 : Bool;
+      不在喷印状态 : Bool;
+      上一条信息没有喷完 : Bool;
+   END_VAR
+
+   VAR_TEMP 
+      OrderID : Byte;
+      RTN : Byte;
+      BackData : Word;
+      CheckSum : String;
+      Temp_Str : String;
+      求和 : DWord;
+      i : UDInt;
+      j : UDInt;
+      Temp_Chars : Array[0..20] of Byte;
+      Temp_Word : Word;
+   END_VAR
+
+
+BEGIN
+	IF LEN(#返回数据) = 14 THEN
+	    #Temp_Str := MID(IN := #返回数据, L := 2, P := 2);
+	    #j := ATH(IN := #Temp_Str, N := 2, OUT => #OrderID);
+	    #Temp_Str := MID(IN := #返回数据, L := 2, P := 4);
+	    #j := ATH(IN := #Temp_Str, N := 2, OUT => #RTN);
+	    #Temp_Str := MID(IN := #返回数据, L := 4, P := 6);
+	    #j := ATH(IN := #Temp_Str, N := 4, OUT => #BackData);
+	    #CheckSum := MID(IN := #返回数据, L := 4, P := 10);
+	    #求和 := 0;//..........................................................
+	    Strg_TO_Chars(Strg := #返回数据,
+	                  pChars := 0,
+	                  Cnt => #j,
+	                  Chars := #Temp_Chars);
+	    FOR #i := 1 TO 8 BY 1 DO
+	        #求和 := #求和 + #Temp_Chars[#i];
+	    END_FOR;
+	    #Temp_Word := DWORD_TO_WORD(#求和 MOD 65536);
+	    #Temp_Word := NOT #Temp_Word;
+	    #Temp_Word := #Temp_Word + 1; //Checksum
+	    #j := HTA(IN := #Temp_Word, N := 4, OUT => #Temp_Str);//Checksum明码.....
+	    IF #Temp_Str = #CheckSum THEN
+	        #喷码机数据返回 := 1;
+	    ELSE
+	        #喷码机数据返回 := 0;
+	    END_IF;
+	    #已满1000条 := 0;
+	    #不在喷印状态 := 0;
+	    #上一条信息没有喷完 := 0;
+	    IF #OrderID = 16#01 THEN
+	        IF #RTN = 16#00 THEN
+	            #数据条数 := #BackData;
+	        END_IF;
+	        IF #RTN = 16#02 THEN
+	            #已满1000条 := 1;
+	        END_IF;
+	        IF #RTN = 16#EF THEN
+	            #不在喷印状态 := 1;
+	        END_IF;
+	    END_IF;
+	    IF #OrderID = 16#02 THEN
+	        IF #RTN = 16#00 THEN
+	            #数据条数 := #BackData;
+	        END_IF;
+	        IF #RTN = 16#06 THEN
+	            #上一条信息没有喷完 := 1;
+	        END_IF;
+	        IF #RTN = 16#EF THEN
+	            #不在喷印状态 := 1;
+	        END_IF;
+	    END_IF;
+	    IF #OrderID = 16#03 THEN
+	        IF #RTN = 16#00 THEN
+	            #数据条数 := 0;
+	        END_IF;
+	        IF #RTN = 16#04 THEN
+	            #数据条数 := 0;
+	        END_IF;
+	    END_IF;
+	    IF #OrderID = 16#FE THEN
+	        IF #RTN = 16#00 THEN
+	            #数据条数 := #BackData;
+	        END_IF;
+	    END_IF;
+	ELSE
+	    #喷码机数据返回 := 0;
+	END_IF;
+END_FUNCTION
+
